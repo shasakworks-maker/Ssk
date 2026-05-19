@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- User Rules ---
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && 
+        incoming().keys().hasAll(['uid', 'email', 'isAdmin', 'isBanned']) &&
+        (incoming().isAdmin == false || request.auth.token.email == 'ashokpal76199@gmail.com') &&
+        incoming().isBanned == false;
+      allow update: if isOwner(userId) && 
+        !incoming().diff(existing()).affectedKeys().hasAny(['isAdmin', 'isBanned', 'uid']);
+      allow write: if isAdmin();
+    }
+
+    // --- Tournament Rules ---
+    match /tournaments/{tournamentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // --- Registration Rules ---
+    match /registrations/{registrationId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isSignedIn() && 
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        exists(/databases/$(database)/documents/tournaments/$(incoming().tournamentId));
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // --- Notification Rules ---
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId);
+      allow update: if isOwner(resource.data.userId) && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow write: if isAdmin();
+    }
+
+    // --- Announcement Rules ---
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Shasak Tournament",
+  "description": "Premium Free Fire Tournament Platform for competitive gaming, featuring real-time registrations, payment verification, and professional match management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
