@@ -11,8 +11,13 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
+// Validate config to prevent blank screen crashes
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error("Firebase Configuration is missing! Please set your environment variables in .env");
+}
+
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, import.meta.env.VITE_FIREBASE_DATABASE_ID);
+export const db = getFirestore(app, import.meta.env.VITE_FIREBASE_DATABASE_ID || '(default)');
 export const auth = getAuth(app);
 
 // Error Handling utility as per integration best practices
